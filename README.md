@@ -1,2 +1,2 @@
-# Projeto Final - Desenvolvimento de Software para Web
+# FrontEnd - Projeto Final Desenvolvimento de Software para Web
 O "Tem Vaga Aí?" é uma plataforma web centralizada que visa conectar estudantes das diversas instituições de ensino de Quixadá (UFC, IFCE, UECE/FECLESC, UniCatólica, ...) a moradias estudantis disponíveis (casas, apartamentos, repúblicas). O sistema busca resolver o problema da busca fragmentada por vagas, que atualmente ocorre de forma descentralizada em grupos de WhatsApp e redes sociais. O público-alvo são "Locadores" (estudantes ou proprietários com vagas para anunciar) e "Interessados" (estudantes, principalmente calouros e veteranos de outras cidades, que procuram um lugar para morar).
