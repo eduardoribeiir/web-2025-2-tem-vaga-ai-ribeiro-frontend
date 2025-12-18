@@ -1,61 +1,37 @@
-# Tem Vaga Aí? - Frontend
+# Tem Vaga Aí - Frontend
 
-Portal que conecta estudantes de Quixadá a vagas em repúblicas, apartamentos e casas compartilhadas. Frontend em React + TypeScript + Vite + Tailwind seguindo uma estrutura inspirada em Clean Architecture.
+## Descrição do Projeto
 
-## ✨ Funcionalidades principais
-- Visualizar vagas com galeria e detalhes
-- Autenticação (login/cadastro) com persistência em localStorage
-- Rotas protegidas para área logada (home-logado, meus anúncios, favoritos, perfil, novo anúncio)
-- Criar e listar anúncios do usuário (persistidos em localStorage, com semente inicial)
-- Favoritar/desfavoritar anúncios (persistido em localStorage; exige login)
-- Modal de login ao tentar favoritar sem autenticação
+Frontend da aplicação "Tem Vaga Aí?", portal que conecta estudantes de Quixadá a vagas em repúblicas e apartamentos. Usa React + TypeScript + Vite + Tailwind, com Clean Architecture.
 
-## 🧭 Rotas
-- `/` home pública
-- `/login`, `/register` autenticação
-- `/ad/:id` detalhes do anúncio
-- Rotas protegidas (requer login): `/home-logado`, `/meus-anuncios`, `/novo-anuncio`, `/favoritos`, `/perfil-info`, `/perfil-seguranca`
+Funcionalidades:
+- Visualizar vagas públicas (somente anúncios `published`)
+- Login e cadastro
+- Criar/editar/excluir anúncios (suporta rascunho `status='draft'` e publicar `status='published'`)
+- Favoritar anúncios (usuário autenticado)
 
-## 🗄️ Persistência local
-- Anúncios: `localStorage` chave `temVagaAi.ads` (carrega semente fixa e salva anúncios criados/atualizados)
-- Usuário autenticado: `temVagaAi.user`
-- Favoritos: `temVagaAi.favorites`
+## Tecnologias
+- React 18
+- TypeScript 5.7
+- Vite 6.4
+- Tailwind CSS 3.4
+- Clean Architecture (domain, application, infrastructure, presentation)
 
-## 🛠️ Stack
-- React 18.3, TypeScript 5.7, Vite 6.4, Tailwind 3.4
-- React Router para navegação e rotas privadas
+## Estrutura (principais)
+- `src/domain`: entidades (`Ad`) e contratos de repositório
+- `src/application`: casos de uso (GetAds, CreateAd, UpdateAd etc.)
+- `src/infrastructure`: `api/HttpClient` (usa `VITE_API_URL`) e `repositories/AdsRepository`
+- `src/presentation`: páginas, componentes, contextos (Auth/Favorites), hooks
 
-## 🚀 Como rodar
-```bash
-# na raiz do projeto FrontEnd Tem Vaga ai
-npm install
-npm run dev
-# abra http://localhost:5173
-```
+## Executando
+1. Entre na pasta `frontend`
+2. Copie/ajuste `.env.local` (já existe) com `VITE_API_URL=http://localhost:4000/api`
+3. Instale dependências: `npm install`
+4. Rode: `npm run dev` e acesse `http://localhost:5173`
+5. Build: `npm run build`
 
-Build de produção:
-```bash
-npm run build
-npm run preview
-```
-
-## 📁 Estrutura (resumo)
-```
-src/
-  domain/           # Entidades e contratos (ex: Ad, IAdsRepository)
-  application/      # Casos de uso (ex: GetAdsUseCase, CreateAdUseCase)
-  infrastructure/   # Repositórios concretos + instância compartilhada
-  presentation/     # Páginas, hooks, contextos (Auth, Favorites) e App.tsx com Router
-```
-
-## 📌 Notas de implementação
-- App usa `AuthProvider` e `FavoritesProvider` para compartilhar estado e proteger rotas.
-- Repositório de anúncios compartilha instância (`adsRepositoryInstance`) para manter persistência única.
-- Formulários de login/registro disparam `onLogin` para popular o contexto de auth.
-- Favoritos e anúncios criados permanecem após recarregar a página via localStorage.
-
-## 📄 Licença
-MIT. Veja `LICENSE`.
-
-## 👥 Autor
-- Luiz Eduardo — Frontend
+## Integração com o backend
+- Base URL: `VITE_API_URL` -> `http://localhost:4000/api`
+- Autenticação: token salvo em localStorage e enviado como `Authorization: Bearer <token>`
+- Ads: respeita `status` (`draft`/`published`); a Home mostra só `published`, Meus Anúncios mostra ambos
+- Favoritos: usa `/favorites` e `/favorites/:adId/toggle` com usuário logado

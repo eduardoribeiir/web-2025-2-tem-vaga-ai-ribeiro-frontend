@@ -5,14 +5,17 @@ import HomeLogadoPage from './pages/HomeLogadoPage';
 import MeusAnunciosPage from './pages/MeusAnunciosPage';
 import FavoritosPage from './pages/FavoritosPage';
 import NovoAnuncioPage from './pages/NovoAnuncioPage';
+import EditarAnuncioPage from './pages/EditarAnuncioPage';
 import MeuPerfilInformacoesPPage from './pages/MeuPerfilInformacoesPPage';
 import MeuPerfilSegurancaPage from './pages/MeuPerfilSegurancaPage';
 import AdDetailsPage from './pages/AdDetailsPage';
-import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 
-type Page = 'home' | 'login' | 'register' | 'home-logado' | 'meus-anuncios' | 'favoritos' | 'novo-anuncio' | 'perfil-info' | 'perfil-seguranca' | 'ad-details';
+type Page = 'home' | 'login' | 'register' | 'home-logado' | 'meus-anuncios' | 'favoritos' | 'novo-anuncio' | 'editar-anuncio' | 'perfil-info' | 'perfil-seguranca' | 'ad-details';
 
 const routeMap: Record<Page, string> = {
   home: '/',
@@ -22,44 +25,13 @@ const routeMap: Record<Page, string> = {
   'meus-anuncios': '/meus-anuncios',
   favoritos: '/favoritos',
   'novo-anuncio': '/novo-anuncio',
+  'editar-anuncio': '/editar-anuncio/:id',
   'perfil-info': '/perfil-info',
   'perfil-seguranca': '/perfil-seguranca',
   'ad-details': '/ad/:id',
 };
 
-const FloatingNav = () => {
-  const navigate = useNavigate();
-  const { isAuthenticated, logout } = useAuth();
-
-  if (!isAuthenticated) return null;
-
-  const go = (path: string) => navigate(path);
-
-  return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-white/95 backdrop-blur-sm shadow-lg rounded-full px-6 py-3 border border-gray-200">
-      <div className="flex gap-4 items-center">
-        <button onClick={() => go('/home-logado')} className="px-4 py-2 rounded-full transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
-          Início
-        </button>
-        <button onClick={() => go('/meus-anuncios')} className="px-4 py-2 rounded-full transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
-          Meus Anúncios
-        </button>
-        <button onClick={() => go('/novo-anuncio')} className="px-4 py-2 rounded-full transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
-          Novo Anúncio
-        </button>
-        <button onClick={() => go('/favoritos')} className="px-4 py-2 rounded-full transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
-          Favoritos
-        </button>
-        <button onClick={() => go('/perfil-info')} className="px-4 py-2 rounded-full transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
-          Perfil
-        </button>
-        <button onClick={() => { logout(); go('/'); }} className="px-4 py-2 rounded-full transition-all bg-red-50 text-red-600 hover:bg-red-100">
-          Sair
-        </button>
-      </div>
-    </div>
-  );
-};
+// Central navbar will be rendered here using shared component
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
@@ -71,6 +43,10 @@ const buildOnNavigate = (navigate: ReturnType<typeof useNavigate>) => (page: Pag
     navigate(`/ad/${adId}`);
     return;
   }
+  if (page === 'editar-anuncio' && adId) {
+    navigate(`/editar-anuncio/${adId}`);
+    return;
+  }
   navigate(routeMap[page] || '/');
 };
 
@@ -80,23 +56,44 @@ const AdDetailsRoute = ({ onNavigate }: { onNavigate: (page: Page, adId?: string
   return <AdDetailsPage adId={id || ''} onNavigate={onNavigate} isLoggedIn={isAuthenticated} />;
 };
 
+const EditarAnuncioRoute = ({ onNavigate }: { onNavigate: (page: Page, adId?: string) => void }) => {
+  const { id } = useParams<{ id: string }>();
+  return <EditarAnuncioPage adId={id || ''} onNavigate={onNavigate} />;
+};
+
 const AppRoutes = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+  const { pathname } = useLocation();
   const onNavigate = buildOnNavigate(navigate);
 
-  const handleLogin = (user: { email: string; name?: string }) => {
-    login(user);
-    navigate('/home-logado');
-  };
+  const currentPage: string =
+    pathname === '/' ? 'home' :
+    pathname.startsWith('/home-logado') ? 'home-logado' :
+    pathname.startsWith('/favoritos') ? 'favoritos' :
+    pathname.startsWith('/meus-anuncios') ? 'meus-anuncios' :
+    pathname.startsWith('/novo-anuncio') ? 'novo-anuncio' :
+    pathname.startsWith('/editar-anuncio') ? 'editar-anuncio' :
+    pathname.startsWith('/perfil-info') ? 'perfil-info' :
+    pathname.startsWith('/perfil-seguranca') ? 'perfil-seguranca' :
+    pathname.startsWith('/ad/') ? 'ad-details' : '';
 
   return (
     <div className="relative w-full min-h-screen bg-gray-50">
-      <FloatingNav />
+      <Navbar
+        onNavigate={onNavigate}
+        isLoggedIn={isAuthenticated}
+        userEmail={user?.email}
+        userName={user?.name}
+        userAvatarUrl={user?.avatarUrl}
+        onLogout={logout}
+        currentPage={currentPage}
+      />
+      <div className="pt-16">
       <Routes>
         <Route path="/" element={<HomePage onNavigate={onNavigate} />} />
-        <Route path="/login" element={<LoginPage onNavigate={onNavigate} onLogin={handleLogin} />} />
-        <Route path="/register" element={<RegisterPage onNavigate={onNavigate} onLogin={handleLogin} />} />
+        <Route path="/login" element={<LoginPage onNavigate={onNavigate} />} />
+        <Route path="/register" element={<RegisterPage onNavigate={onNavigate} />} />
         <Route path="/ad/:id" element={<AdDetailsRoute onNavigate={onNavigate} />} />
 
         <Route
@@ -132,6 +129,14 @@ const AppRoutes = () => {
           }
         />
         <Route
+          path="/editar-anuncio/:id"
+          element={
+            <PrivateRoute>
+              <EditarAnuncioRoute onNavigate={onNavigate} />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/perfil-info"
           element={
             <PrivateRoute>
@@ -150,6 +155,8 @@ const AppRoutes = () => {
 
         <Route path="*" element={<Navigate to={isAuthenticated ? '/home-logado' : '/'} replace />} />
       </Routes>
+      <Footer />
+      </div>
     </div>
   );
 };

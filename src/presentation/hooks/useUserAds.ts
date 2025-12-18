@@ -9,14 +9,16 @@ export const useUserAds = (userEmail: string) => {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchAds = async () => {
+    setLoading(true);
+    const data = await getUserAdsUseCase.execute(userEmail);
+    setAds(data);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchAds = async () => {
-      const data = await getUserAdsUseCase.execute(userEmail);
-      setAds(data);
-      setLoading(false);
-    };
     fetchAds();
   }, [userEmail]);
 
-  return { ads, loading };
+  return { ads, loading, refetch: fetchAds };
 };

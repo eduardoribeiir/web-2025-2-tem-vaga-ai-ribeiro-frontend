@@ -4,8 +4,16 @@ export interface Ad {
   description: string;
   seller: string; // em vez de company
   location: string;
+  cep?: string;
   price?: number; // em vez de salary
   category: 'aluguel' | 'venda' | 'serviço' | 'outro'; // em vez de type
+  bedrooms?: number;
+  bathrooms?: number;
+  rules?: string[]; // regras selecionadas
+  amenities?: string[]; // comodidades selecionadas
+  custom_rules?: string; // regras customizadas
+  custom_amenities?: string; // comodidades customizadas
   images?: string[]; // array de URLs das imagens
+  status?: 'draft' | 'published'; // status do anúncio
   postedBy: string; // user email
 }

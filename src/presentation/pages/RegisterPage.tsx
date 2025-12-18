@@ -1,22 +1,31 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface RegisterPageProps {
   onNavigate: (page: 'home' | 'login' | 'register' | 'home-logado' | 'meus-anuncios' | 'favoritos' | 'novo-anuncio' | 'perfil-info' | 'perfil-seguranca' | 'ad-details', adId?: string) => void;
-  onLogin: (user: { email: string; name?: string }) => void;
 }
 
-const RegisterPage = ({ onNavigate, onLogin }: RegisterPageProps) => {
+const RegisterPage = ({ onNavigate }: RegisterPageProps) => {
+  const { register, loading, error } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [localError, setLocalError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock register
-    if (name && email && password) {
-      onLogin({ name, email });
+    setLocalError('');
+    try {
+      if (name && email && password) {
+        await register(name, email, password);
+        onNavigate('home-logado');
+      }
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Erro ao registrar');
     }
   };
+
+  const displayError = error || localError;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#61452a] to-[#8b5a3c] flex items-center justify-center p-4 relative overflow-hidden">
@@ -94,12 +103,14 @@ const RegisterPage = ({ onNavigate, onLogin }: RegisterPageProps) => {
               />
             </div>
           </div>
+          {displayError && <div className="rounded-md bg-red-50 p-4 text-sm text-red-800">{displayError}</div>}
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#61452a] hover:bg-[#503a22] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#61452a]"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#61452a] hover:bg-[#503a22] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#61452a] disabled:opacity-50"
             >
-              Criar conta
+              {loading ? 'Criando conta...' : 'Criar conta'}
             </button>
           </div>
           <div className="text-center">

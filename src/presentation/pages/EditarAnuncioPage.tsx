@@ -1,16 +1,22 @@
-import { useState } from 'react';
-import { CreateAdUseCase } from '../../application/useCases/CreateAdUseCase';
-import { adsRepositoryInstance } from '../../infrastructure/repositories/adsRepositoryInstance';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { AdsRepository } from '../../infrastructure/repositories/AdsRepository';
+import { UpdateAdUseCase } from '../../application/useCases/UpdateAdUseCase';
 
-interface NovoAnuncioPageProps {
-  onNavigate: (page: 'home' | 'login' | 'register' | 'home-logado' | 'meus-anuncios' | 'favoritos' | 'novo-anuncio' | 'perfil-info' | 'perfil-seguranca') => void;
+interface EditarAnuncioPageProps {
+  adId: string;
+  onNavigate: (page: 'home' | 'login' | 'register' | 'home-logado' | 'meus-anuncios' | 'favoritos' | 'novo-anuncio' | 'perfil-info' | 'perfil-seguranca' | 'ad-details', adId?: string) => void;
 }
 
-const createAdUseCase = new CreateAdUseCase(adsRepositoryInstance);
+const adsRepository = new AdsRepository();
+const updateAdUseCase = new UpdateAdUseCase(adsRepository);
 
-const NovoAnuncioPage = ({ onNavigate }: NovoAnuncioPageProps) => {
+const EditarAnuncioPage = ({ adId, onNavigate }: EditarAnuncioPageProps) => {
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [company, setCompany] = useState('');
@@ -19,112 +25,140 @@ const NovoAnuncioPage = ({ onNavigate }: NovoAnuncioPageProps) => {
   const [salary, setSalary] = useState('');
   const [bedrooms, setBedrooms] = useState('');
   const [bathrooms, setBathrooms] = useState('');
-  const [type, setType] = useState<'aluguel' | 'venda' | 'serviço' | 'outro'>('venda');
+  const [type, setType] = useState<'aluguel' | 'venda' | 'serviço' | 'outro'>('aluguel');
   const [rules, setRules] = useState<string[]>([]);
   const [customRules, setCustomRules] = useState('');
   const [amenities, setAmenities] = useState<string[]>([]);
   const [customAmenities, setCustomAmenities] = useState('');
-  const [saving, setSaving] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [uploadError, setUploadError] = useState('');
+  const [status, setStatus] = useState<'draft' | 'published'>('published');
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
+  useEffect(() => {
+    const loadAd = async () => {
+      try {
+        const ad = await adsRepository.getById(adId);
+        if (ad) {
+          setTitle(ad.title);
+          setDescription(ad.description);
+          setCompany(ad.seller);
+          setLocation(ad.location);
+          setCep(ad.cep || '');
+          setSalary(ad.price?.toString() || '');
+          setBedrooms(ad.bedrooms?.toString() || '');
+          setBathrooms(ad.bathrooms?.toString() || '');
+          setType(ad.category);
+          setRules(ad.rules || []);
+          setCustomRules(ad.custom_rules || '');
+          setAmenities(ad.amenities || []);
+          setCustomAmenities(ad.custom_amenities || '');
+          setImages(ad.images || []);
+          setStatus(ad.status === 'draft' ? 'draft' : 'published');
+        }
+      } catch (error) {
+        console.error('Erro ao carregar anúncio:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAd();
+  }, [adId]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    setUploadError('');
+    const newImages: string[] = [];
+
+    Array.from(files).forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError('Arquivos devem ter no máximo 5MB');
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onload = () => resolve((reader.result as string) || '');
-      reader.onerror = reject;
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          newImages.push(event.target.result as string);
+          if (newImages.length === files.length) {
+            setImages(prev => [...prev, ...newImages]);
+          }
+        }
+      };
       reader.readAsDataURL(file);
     });
-
-  const handleImagesChange = async (fileList: FileList | null) => {
-    if (!fileList) return;
-    setUploadError('');
-    const remaining = 20 - images.length;
-    if (remaining <= 0) {
-      setUploadError('Você já atingiu o limite de 20 fotos.');
-      return;
-    }
-
-    const selected = Array.from(fileList).slice(0, remaining);
-    if (selected.length < fileList.length) {
-      setUploadError('Apenas 20 fotos são permitidas por anúncio.');
-    }
-
-    const base64Images = await Promise.all(selected.map(fileToBase64));
-    setImages(prev => [...prev, ...base64Images]);
   };
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent, isDraft = false) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.email) {
-      alert('Faça login para criar um anúncio.');
-      onNavigate('login');
-      return;
-    }
-
-    if (!isDraft && !(title && description && company && location)) {
-      alert('Preencha os campos obrigatórios: Título, Descrição, Vendedor e Localização');
+    
+    if (!user) {
+      alert('Você precisa estar logado para editar um anúncio');
       return;
     }
 
     setSaving(true);
+
     try {
-      await createAdUseCase.execute({
-        title: title || 'Rascunho',
-        description: description || 'Rascunho de anúncio',
-        seller: company || 'Anunciante',
-        location: location || 'A definir',
+      await updateAdUseCase.execute(adId, {
+        id: adId,
+        title,
+        description,
+        seller: company,
+        location,
         cep,
-        price: salary ? Number(salary) : undefined,
+        price: salary ? parseFloat(salary) : undefined,
+        bedrooms: bedrooms ? parseInt(bedrooms) : undefined,
+        bathrooms: bathrooms ? parseInt(bathrooms) : undefined,
         category: type,
-        bedrooms: bedrooms ? Number(bedrooms) : undefined,
-        bathrooms: bathrooms ? Number(bathrooms) : undefined,
         rules,
         amenities,
         custom_rules: customRules,
         custom_amenities: customAmenities,
         images,
-        status: isDraft ? 'draft' : 'published',
-        postedBy: user.email,
+        status,
+        postedBy: user.email
       });
-      
-      if (isDraft) {
-        alert('Rascunho salvo com sucesso!');
-      } else {
-        alert('Anúncio publicado com sucesso!');
-      }
+
+      alert('Anúncio atualizado com sucesso!');
       onNavigate('meus-anuncios');
     } catch (error) {
-      console.error('Erro:', error);
-      alert(isDraft ? 'Erro ao salvar rascunho' : 'Erro ao publicar anúncio');
+      console.error('Erro ao atualizar anúncio:', error);
+      alert('Erro ao atualizar anúncio. Tente novamente.');
     } finally {
       setSaving(false);
     }
   };
 
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen pt-20">Carregando...</div>;
+  }
+
   return (
-    <div className="min-h-screen bg-[#f7f7f7]">
-      <div className="max-w-5xl mx-auto py-10 px-4">
+    <div className="min-h-screen bg-[#f7f7f7] pt-20">
+      <div className="max-w-3xl mx-auto py-8 px-4">
         <div className="mb-6">
-          <p className="text-sm text-gray-500">Publicar moradia</p>
-          <h1 className="text-2xl font-semibold text-gray-900">Novo anúncio</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Editar Anúncio</h1>
+          <p className="text-sm text-gray-500">Atualize as informações do seu anúncio</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-5">
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Título</label>
+              <label className="block text-sm font-medium text-gray-700">Título do Anúncio</label>
               <input
                 type="text"
+                required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#61452a]/60"
-                placeholder="Ex.: Suíte mobiliada perto do campus"
-                required
+                placeholder="Ex.: Quarto em república próximo à UFC"
               />
             </div>
             <div className="space-y-2">
@@ -147,22 +181,22 @@ const NovoAnuncioPage = ({ onNavigate }: NovoAnuncioPageProps) => {
               <label className="block text-sm font-medium text-gray-700">Vendedor/Anunciante</label>
               <input
                 type="text"
+                required
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#61452a]/60"
-                placeholder="Seu nome ou república"
-                required
+                placeholder="Nome do anunciante"
               />
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">Localização</label>
               <input
                 type="text"
+                required
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#61452a]/60"
-                placeholder="Bairro, cidade"
-                required
+                placeholder="Ex.: Centro, Quixadá"
               />
             </div>
           </div>
@@ -175,7 +209,7 @@ const NovoAnuncioPage = ({ onNavigate }: NovoAnuncioPageProps) => {
                 value={cep}
                 onChange={(e) => setCep(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#61452a]/60"
-                placeholder="Ex.: 63000-000"
+                placeholder="Ex.: 63900-000"
               />
             </div>
             <div className="space-y-2"></div>
@@ -184,24 +218,25 @@ const NovoAnuncioPage = ({ onNavigate }: NovoAnuncioPageProps) => {
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">Descrição</label>
             <textarea
+              required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#61452a]/60"
-              placeholder="Destaque comodidades, regras e proximidades importantes"
-              required
+              placeholder="Descreva os detalhes da vaga..."
             />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Preço (opcional)</label>
+              <label className="block text-sm font-medium text-gray-700">Preço/mês (R$)</label>
               <input
                 type="number"
+                step="0.01"
                 value={salary}
                 onChange={(e) => setSalary(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#61452a]/60"
-                placeholder="Ex.: 750"
+                placeholder="Ex.: 500.00"
               />
             </div>
             <div className="space-y-2">
@@ -297,63 +332,63 @@ const NovoAnuncioPage = ({ onNavigate }: NovoAnuncioPageProps) => {
           <div className="space-y-2">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 flex justify-between">
-                Fotos do imóvel <span className="text-gray-500 text-xs">{images.length}/20</span>
+                <span>Fotos (até 5)</span>
+                <span className="text-xs text-gray-500">{images.length}/5 fotos</span>
               </label>
-              <label
-                htmlFor="images"
-                className="flex flex-col items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50 hover:border-[#61452a]/60 cursor-pointer text-center"
-              >
-                <span className="text-sm font-medium text-gray-800">Clique ou arraste para enviar</span>
-                <span className="text-xs text-gray-500">Até 20 fotos em JPG ou PNG</span>
-                <input
-                  id="images"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => handleImagesChange(e.target.files)}
-                />
-              </label>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileUpload}
+                disabled={images.length >= 5}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#61452a]/60 disabled:bg-gray-50"
+              />
               {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
-              {images.length > 0 && (
-                <div className="grid grid-cols-5 gap-2">
-                  {images.map((src, idx) => (
-                    <div key={idx} className="relative group h-20 rounded-lg overflow-hidden bg-gray-100">
-                      <img src={src} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(idx)}
-                        className="absolute top-1 right-1 text-[10px] px-2 py-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
-                      >
-                        Remover
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+
+            {images.length > 0 && (
+              <div className="grid grid-cols-5 gap-2 mt-3">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative group">
+                    <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-20 object-cover rounded-lg" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="flex flex-wrap gap-3 pt-2">
+          {/* Status do Anúncio */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Status do Anúncio</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as 'draft' | 'published')}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#61452a]/60"
+            >
+              <option value="draft">Rascunho (privado)</option>
+              <option value="published">Publicado (visível para todos)</option>
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4">
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2.5 bg-[#61452a] text-white rounded-lg hover:bg-[#503a22] transition-colors disabled:opacity-60"
+              className="flex-1 bg-[#61452a] text-white font-medium py-3 rounded-lg hover:bg-[#503a22] transition-colors disabled:bg-gray-400"
             >
-              {saving ? 'Publicando...' : 'Publicar anúncio'}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => handleSubmit(e, true)}
-              disabled={saving}
-              className="px-5 py-2.5 bg-blue-500 text-white rounded-lg border border-blue-600 hover:bg-blue-600 transition-colors disabled:bg-blue-300"
-            >
-              {saving ? 'Salvando...' : 'Salvar rascunho'}
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
             </button>
             <button
               type="button"
               onClick={() => onNavigate('meus-anuncios')}
-              className="px-5 py-2.5 text-gray-700 hover:text-gray-900"
+              className="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancelar
             </button>
@@ -364,4 +399,4 @@ const NovoAnuncioPage = ({ onNavigate }: NovoAnuncioPageProps) => {
   );
 };
 
-export default NovoAnuncioPage;
+export default EditarAnuncioPage;

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Ad } from '../../domain/entities/Ad';
-import { adsRepositoryInstance } from '../../infrastructure/repositories/adsRepositoryInstance';
+import { AdsRepository } from '../../infrastructure/repositories/AdsRepository';
 import { GetAdByIdUseCase } from '../../application/useCases/GetAdByIdUseCase';
 
-const getAdByIdUseCase = new GetAdByIdUseCase(adsRepositoryInstance);
+const adsRepository = new AdsRepository();
+const getAdByIdUseCase = new GetAdByIdUseCase(adsRepository);
 
 export const useAd = (id: string) => {
   const [ad, setAd] = useState<Ad | null>(null);

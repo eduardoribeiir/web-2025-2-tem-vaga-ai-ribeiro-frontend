@@ -1,21 +1,30 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface LoginPageProps {
   onNavigate: (page: 'home' | 'login' | 'register' | 'home-logado' | 'meus-anuncios' | 'favoritos' | 'novo-anuncio' | 'perfil-info' | 'perfil-seguranca' | 'ad-details', adId?: string) => void;
-  onLogin: (user: { email: string; name?: string }) => void;
 }
 
-const LoginPage = ({ onNavigate: _onNavigate, onLogin: _onLogin }: LoginPageProps) => {
+const LoginPage = ({ onNavigate }: LoginPageProps) => {
+  const { login, loading, error } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [localError, setLocalError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login
-    if (email && password) {
-      _onLogin({ email });
+    setLocalError('');
+    try {
+      if (email && password) {
+        await login(email, password);
+        onNavigate('home-logado');
+      }
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Erro ao fazer login');
     }
   };
+
+  const displayError = error || localError;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#61452a] to-[#8b5a3c] flex items-center justify-center p-4 relative overflow-hidden">
@@ -26,7 +35,7 @@ const LoginPage = ({ onNavigate: _onNavigate, onLogin: _onLogin }: LoginPageProp
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <button
-              onClick={() => _onNavigate('home')}
+              onClick={() => onNavigate('home')}
               className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:bg-white/90 transition-colors"
               title="Voltar ao início"
             >
@@ -47,6 +56,7 @@ const LoginPage = ({ onNavigate: _onNavigate, onLogin: _onLogin }: LoginPageProp
             <p className="text-gray-600 mt-2">Acesse sua conta para continuar</p>
           </div>
 
+          {displayError && <div className="rounded-md bg-red-50 p-4 text-sm text-red-800 mb-4">{displayError}</div>}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -82,9 +92,10 @@ const LoginPage = ({ onNavigate: _onNavigate, onLogin: _onLogin }: LoginPageProp
 
             <button
               type="submit"
-              className="w-full bg-[#61452a] text-white py-3 px-4 rounded-lg hover:bg-[#503a22] transition-colors font-medium"
+              disabled={loading}
+              className="w-full bg-[#61452a] text-white py-3 px-4 rounded-lg hover:bg-[#503a22] transition-colors font-medium disabled:opacity-50"
             >
-              Entrar
+              {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
 
@@ -92,7 +103,7 @@ const LoginPage = ({ onNavigate: _onNavigate, onLogin: _onLogin }: LoginPageProp
             <p className="text-gray-600">
               Não tem uma conta?{' '}
               <button
-                onClick={() => _onNavigate('register')}
+                onClick={() => onNavigate('register')}
                 className="text-[#61452a] hover:text-[#503a22] font-medium"
               >
                 Cadastre-se

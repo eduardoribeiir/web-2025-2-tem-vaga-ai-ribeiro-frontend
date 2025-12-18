@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useAuth } from './AuthContext';
+import { httpClient } from '../../infrastructure/api/HttpClient';
 
 interface FavoritesContextValue {
   favorites: string[];
@@ -13,20 +15,48 @@ const FavoritesContext = createContext<FavoritesContextValue | undefined>(undefi
 
 export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
   const [favorites, setFavoritesState] = useState<string[]>([]);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setFavoritesState(JSON.parse(stored));
-    }
-  }, []);
+    const init = async () => {
+      if (isAuthenticated) {
+        try {
+          const favAds = await httpClient.get<any[]>('/favorites');
+          const ids = favAds.map(a => a.id?.toString());
+          setFavoritesState(ids);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+          return;
+        } catch {
+          // fallback to local storage
+        }
+      }
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setFavoritesState(JSON.parse(stored));
+      }
+    };
+    init();
+  }, [isAuthenticated]);
 
   const persist = (ids: string[]) => {
     setFavoritesState(ids);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
   };
 
-  const toggleFavorite = (adId: string) => {
+  const toggleFavorite = async (adId: string) => {
+    if (isAuthenticated) {
+      try {
+        const result = await httpClient.post<{ favorite: boolean }>(`/favorites/${adId}/toggle`, {});
+        if (result.favorite) {
+          persist(Array.from(new Set([...favorites, adId])));
+        } else {
+          persist(favorites.filter(id => id !== adId));
+        }
+        return;
+      } catch {
+        // fallback to local behavior
+      }
+    }
     if (favorites.includes(adId)) {
       persist(favorites.filter(id => id !== adId));
     } else {
