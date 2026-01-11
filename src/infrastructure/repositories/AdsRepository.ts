@@ -2,6 +2,37 @@ import { Ad } from '../../domain/entities/Ad';
 import { IAdsRepository } from '../../domain/repositories/IAdsRepository';
 import { httpClient } from '../api/HttpClient';
 
+// Mapeamento de categorias (slug -> ID)
+const CATEGORY_MAP: Record<string, number> = {
+  'apartamento': 1,
+  'casa': 2,
+  'kitnet': 3,
+  'quarto': 4,
+  'residencial': 5,
+  'aluguel': 1, // fallback
+  'venda': 1,   // fallback
+  'serviço': 5, // fallback
+  'outro': 5    // fallback
+};
+
+// Mapeamento reverso (ID -> slug)
+const ID_TO_CATEGORY: Record<number, string> = {
+  1: 'aluguel',
+  2: 'aluguel',
+  3: 'aluguel',
+  4: 'aluguel',
+  5: 'outro'
+};
+
+const getCategoryId = (category: string): number => {
+  const slug = category.toLowerCase();
+  return CATEGORY_MAP[slug] || 1; // default: apartamento
+};
+
+const getCategoryFromId = (categoryId: number): string => {
+  return ID_TO_CATEGORY[categoryId] || 'aluguel';
+};
+
 export class AdsRepository implements IAdsRepository {
   async getAll(): Promise<Ad[]> {
     const ads = await httpClient.get<any[]>('/ads');
@@ -13,7 +44,7 @@ export class AdsRepository implements IAdsRepository {
       location: ad.location,
       cep: ad.cep,
       price: ad.price,
-      category: ad.category,
+      category: getCategoryFromId(ad.category_id),
       bedrooms: ad.bedrooms,
       bathrooms: ad.bathrooms,
       rules: ad.rules || [],
@@ -23,6 +54,8 @@ export class AdsRepository implements IAdsRepository {
       images: ad.images || [],
       status: ad.status,
       postedBy: ad.user_id?.toString() || '',
+      created_at: ad.created_at,
+      updated_at: ad.updated_at,
     }));
   }
 
@@ -37,7 +70,7 @@ export class AdsRepository implements IAdsRepository {
         location: ad.location,
         cep: ad.cep,
         price: ad.price,
-        category: ad.category,
+        category: getCategoryFromId(ad.category_id),
         bedrooms: ad.bedrooms,
         bathrooms: ad.bathrooms,
         rules: ad.rules || [],
@@ -47,6 +80,8 @@ export class AdsRepository implements IAdsRepository {
         images: ad.images || [],
         status: ad.status,
         postedBy: ad.user_id?.toString() || '',
+        created_at: ad.created_at,
+        updated_at: ad.updated_at,
       };
     } catch {
       return null;
@@ -54,7 +89,7 @@ export class AdsRepository implements IAdsRepository {
   }
 
   async getByUser(userEmail: string): Promise<Ad[]> {
-    const ads = await httpClient.get<any[]>('/users/me/ads');
+    const ads = await httpClient.get<any[]>('/ads/me');
     return ads.map(ad => ({
       id: ad.id.toString(),
       title: ad.title,
@@ -63,7 +98,7 @@ export class AdsRepository implements IAdsRepository {
       location: ad.location,
       cep: ad.cep,
       price: ad.price,
-      category: ad.category,
+      category: getCategoryFromId(ad.category_id),
       bedrooms: ad.bedrooms,
       bathrooms: ad.bathrooms,
       rules: ad.rules || [],
@@ -73,6 +108,8 @@ export class AdsRepository implements IAdsRepository {
       images: ad.images || [],
       status: ad.status,
       postedBy: ad.user_id?.toString() || userEmail || '',
+      created_at: ad.created_at,
+      updated_at: ad.updated_at,
     }));
   }
 
@@ -84,7 +121,7 @@ export class AdsRepository implements IAdsRepository {
       location: ad.location,
       cep: ad.cep,
       price: ad.price,
-      category: ad.category,
+      category_id: getCategoryId(ad.category),
       bedrooms: ad.bedrooms,
       bathrooms: ad.bathrooms,
       rules: ad.rules || [],
@@ -102,7 +139,7 @@ export class AdsRepository implements IAdsRepository {
       location: created.location,
       cep: created.cep,
       price: created.price,
-      category: created.category,
+      category: getCategoryFromId(created.category_id),
       bedrooms: created.bedrooms,
       bathrooms: created.bathrooms,
       rules: created.rules || [],
@@ -112,6 +149,8 @@ export class AdsRepository implements IAdsRepository {
       images: created.images || [],
       status: created.status,
       postedBy: created.user_id?.toString() || ad.postedBy,
+      created_at: created.created_at,
+      updated_at: created.updated_at,
     };
   }
 
@@ -124,7 +163,7 @@ export class AdsRepository implements IAdsRepository {
         location: updates.location,
         cep: updates.cep,
         price: updates.price,
-        category: updates.category,
+        category_id: updates.category ? getCategoryId(updates.category) : undefined,
         bedrooms: updates.bedrooms,
         bathrooms: updates.bathrooms,
         rules: updates.rules,
@@ -142,7 +181,7 @@ export class AdsRepository implements IAdsRepository {
         location: updated.location,
         cep: updated.cep,
         price: updated.price,
-        category: updated.category,
+        category: getCategoryFromId(updated.category_id),
         bedrooms: updated.bedrooms,
         bathrooms: updated.bathrooms,
         rules: updated.rules || [],

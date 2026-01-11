@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 interface RequestOptions {
   method?: string;
@@ -26,15 +26,23 @@ class HttpClient {
   }
 
   async request<T>(url: string, options: RequestOptions = {}): Promise<T> {
+    const headers = { ...this.getHeaders(), ...options.headers };
+    
+    // Se body é string e Content-Type é form-urlencoded, não fazer JSON.stringify
+    const isFormData = headers['Content-Type'] === 'application/x-www-form-urlencoded';
+    const body = options.body 
+      ? (isFormData && typeof options.body === 'string' ? options.body : JSON.stringify(options.body))
+      : undefined;
+
     const response = await fetch(`${API_BASE_URL}${url}`, {
       method: options.method || 'GET',
-      headers: { ...this.getHeaders(), ...options.headers },
-      body: options.body ? JSON.stringify(options.body) : undefined,
+      headers,
+      body,
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error || `HTTP ${response.status}`);
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(error.detail || error.error || `HTTP ${response.status}`);
     }
 
     return response.json();
@@ -44,8 +52,8 @@ class HttpClient {
     return this.request<T>(url, { method: 'GET' });
   }
 
-  post<T>(url: string, body: unknown) {
-    return this.request<T>(url, { method: 'POST', body });
+  post<T>(url: string, body: unknown, options?: { headers?: Record<string, string> }) {
+    return this.request<T>(url, { method: 'POST', body, ...options });
   }
 
   put<T>(url: string, body: unknown) {

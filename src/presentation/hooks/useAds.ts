@@ -8,12 +8,22 @@ const getAdsUseCase = new GetAdsUseCase(adsRepositoryInstance);
 export const useAds = () => {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAds = async () => {
-      const data = await getAdsUseCase.execute();
-      setAds(data);
-      setLoading(false);
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getAdsUseCase.execute();
+        setAds(data);
+      } catch (err) {
+        console.error('Erro ao buscar anúncios:', err);
+        setError(err instanceof Error ? err.message : 'Erro ao carregar anúncios');
+        setAds([]);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchAds();
   }, []);
@@ -22,5 +32,5 @@ export const useAds = () => {
     return await adsRepositoryInstance.getById(id);
   };
 
-  return { ads, loading, getAdById };
+  return { ads, loading, error, getAdById };
 };

@@ -44,19 +44,28 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
   };
 
   const toggleFavorite = async (adId: string) => {
+    console.log('Toggling favorite for ad:', adId, 'isAuthenticated:', isAuthenticated);
+    
     if (isAuthenticated) {
       try {
-        const result = await httpClient.post<{ favorite: boolean }>(`/favorites/${adId}/toggle`, {});
-        if (result.favorite) {
+        console.log('Calling API:', `/favorites/${adId}/toggle`);
+        const result = await httpClient.post<{ favorited: boolean }>(`/favorites/${adId}/toggle`, {});
+        console.log('API Response:', result);
+        
+        if (result.favorited) {
           persist(Array.from(new Set([...favorites, adId])));
         } else {
           persist(favorites.filter(id => id !== adId));
         }
         return;
-      } catch {
+      } catch (error) {
+        console.error('Erro ao favoritar:', error);
         // fallback to local behavior
       }
     }
+    
+    // Local fallback
+    console.log('Using local storage fallback');
     if (favorites.includes(adId)) {
       persist(favorites.filter(id => id !== adId));
     } else {

@@ -24,10 +24,6 @@ const AdDetailsPage = ({ adId, onNavigate, isLoggedIn }: AdDetailsPageProps) => 
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
 
-  // Mock data para amenidades e regras (poderia vir da API)
-  const amenities = ['Internet fibra', 'Agua e luz', 'Mobiliado', 'Próximo UFC', 'Pet friendly'];
-  const rules = ['Contrato mínimo 6 meses', 'Visitas agendadas', 'Sem festas', 'Proibido subforme'];
-
   useEffect(() => {
     const loadAd = async () => {
       const adData = await getAdById(adId);
@@ -106,11 +102,18 @@ const AdDetailsPage = ({ adId, onNavigate, isLoggedIn }: AdDetailsPageProps) => 
               location={ad.location}
               category={ad.category}
               price={ad.price}
+              createdAt={ad.created_at}
             />
             <DescriptionBlock text={ad.description} />
             <div className="grid md:grid-cols-2 gap-4">
-              <AmenitiesBlock amenities={amenities} />
-              <RulesBlock rules={rules} />
+              <AmenitiesBlock 
+                amenities={Array.isArray(ad.amenities) ? ad.amenities : []} 
+                customAmenities={ad.custom_amenities}
+              />
+              <RulesBlock 
+                rules={Array.isArray(ad.rules) ? ad.rules : []} 
+                customRules={ad.custom_rules}
+              />
             </div>
           </div>
 

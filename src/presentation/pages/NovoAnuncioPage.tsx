@@ -39,15 +39,15 @@ const NovoAnuncioPage = ({ onNavigate }: NovoAnuncioPageProps) => {
   const handleImagesChange = async (fileList: FileList | null) => {
     if (!fileList) return;
     setUploadError('');
-    const remaining = 20 - images.length;
+    const remaining = 15 - images.length;
     if (remaining <= 0) {
-      setUploadError('Você já atingiu o limite de 20 fotos.');
+      setUploadError('Você já atingiu o limite de 15 fotos.');
       return;
     }
 
     const selected = Array.from(fileList).slice(0, remaining);
     if (selected.length < fileList.length) {
-      setUploadError('Apenas 20 fotos são permitidas por anúncio.');
+      setUploadError('Apenas 15 fotos são permitidas por anúncio.');
     }
 
     const base64Images = await Promise.all(selected.map(fileToBase64));
@@ -297,14 +297,14 @@ const NovoAnuncioPage = ({ onNavigate }: NovoAnuncioPageProps) => {
           <div className="space-y-2">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 flex justify-between">
-                Fotos do imóvel <span className="text-gray-500 text-xs">{images.length}/20</span>
+                Fotos do imóvel <span className="text-gray-500 text-xs">{images.length}/15</span>
               </label>
               <label
                 htmlFor="images"
                 className="flex flex-col items-center justify-center gap-2 px-4 py-6 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50 hover:border-[#61452a]/60 cursor-pointer text-center"
               >
                 <span className="text-sm font-medium text-gray-800">Clique ou arraste para enviar</span>
-                <span className="text-xs text-gray-500">Até 20 fotos em JPG ou PNG</span>
+                <span className="text-xs text-gray-500">Até 15 fotos em JPG ou PNG</span>
                 <input
                   id="images"
                   type="file"

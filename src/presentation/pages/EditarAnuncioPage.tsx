@@ -332,8 +332,8 @@ const EditarAnuncioPage = ({ adId, onNavigate }: EditarAnuncioPageProps) => {
           <div className="space-y-2">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700 flex justify-between">
-                <span>Fotos (até 5)</span>
-                <span className="text-xs text-gray-500">{images.length}/5 fotos</span>
+                <span>Fotos (até 15)</span>
+                <span className="text-xs text-gray-500">{images.length}/15 fotos</span>
               </label>
               <input
                 type="file"

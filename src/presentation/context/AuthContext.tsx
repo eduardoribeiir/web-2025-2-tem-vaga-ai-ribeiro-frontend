@@ -47,8 +47,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const userData = { id: result.user.id, name: result.user.name, email: result.user.email };
       setUser(userData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-      localStorage.setItem(TOKEN_KEY, result.token);
-      httpClient.setToken(result.token);
+      localStorage.setItem(TOKEN_KEY, result.token.access_token);
+      httpClient.setToken(result.token.access_token);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao registrar';
       setError(message);
@@ -62,12 +62,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await httpClient.post<any>('/auth/login', { email, password });
+      // Backend espera form-data OAuth2PasswordRequestForm
+      const formData = new URLSearchParams();
+      formData.append('username', email);
+      formData.append('password', password);
+      
+      const result = await httpClient.post<any>('/auth/login', formData.toString(), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+      
       const userData = { id: result.user.id, name: result.user.name, email: result.user.email };
       setUser(userData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-      localStorage.setItem(TOKEN_KEY, result.token);
-      httpClient.setToken(result.token);
+      localStorage.setItem(TOKEN_KEY, result.token.access_token);
+      httpClient.setToken(result.token.access_token);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao fazer login';
       setError(message);

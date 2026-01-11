@@ -18,13 +18,21 @@
 SPA (Single Page Application) desenvolvida com as melhores práticas de engenharia de software, oferecendo:
 
 - 🎨 **UI/UX Moderna** - Interface clean e responsiva com Tailwind CSS
-- 🏗️ **Clean Architecture** - Código organizado em camadas bem definidas
-- 🔐 **Autenticação Completa** - Sistema de login, registro e perfil de usuário
-- 🏠 **Gerenciamento de Anúncios** - CRUD completo com suporte a rascunhos
-- ❤️ **Sistema de Favoritos** - Salve suas vagas preferidas
-- 🔍 **Filtros Avançados** - Busca por preço, localização e comodidades
-- 📱 **Totalmente Responsivo** - Funciona perfeitamente em qualquer dispositivo
-- ⚡ **Performance Otimizada** - Build ultrarrápido com Vite
+- 🏗️ **Clean Architecture** - Código organizado em camadas bem definidas (Domain, Application, Infrastructure, Presentation)
+- 🔐 **Autenticação JWT** - Sistema completo de login, registro e gerenciamento de sessão
+- 🏠 **CRUD de Anúncios** - Criar, visualizar, editar e excluir anúncios
+- 📝 **Sistema de Rascunhos** - Salve anúncios incompletos como draft (seller/location opcionais)
+- 🔄 **Validação Condicional** - Campos obrigatórios apenas para publicação
+- 📋 **Múltiplos Status** - Rascunho, Publicado, Reservado, Concluído e Cancelado
+- 🖼️ **Upload de Imagens** - Suporte para até 15 imagens por anúncio (5MB cada)
+- ❤️ **Favoritos** - Salve e gerencie suas vagas preferidas
+- 🔍 **Filtros Avançados** - Busca por preço, localização, tipo de moradia
+- 💬 **Sistema de Comentários** - Avaliações e feedbacks dos usuários
+- 👤 **Perfil de Usuário** - Gerenciamento de informações pessoais e segurança
+- 📱 **Totalmente Responsivo** - Funciona perfeitamente em desktop, tablet e mobile
+- ⚡ **Performance Otimizada** - Build ultrarrápido com Vite e lazy loading
+- 🕒 **Datas Relativas** - Sistema inteligente de exibição de tempo ("há 2 dias", "ontem", etc.)
+- 🎯 **SOLID Principles** - Código seguindo as melhores práticas
 
 ---
 
@@ -61,48 +69,65 @@ frontend/
 ├── src/
 │   ├── domain/                    # 🏛️ Camada de Domínio
 │   │   ├── entities/
-│   │   │   └── Ad.ts             # Entidade anúncio
+│   │   │   └── Ad.ts             # Entidade anúncio com status e timestamps
 │   │   └── repositories/
 │   │       └── IAdsRepository.ts # Contrato do repositório
 │   │
 │   ├── application/               # 📋 Camada de Aplicação
 │   │   └── useCases/
 │   │       ├── GetAdsUseCase.ts
+│   │       ├── GetUserAdsUseCase.ts
 │   │       ├── CreateAdUseCase.ts
 │   │       ├── UpdateAdUseCase.ts
 │   │       ├── DeleteAdUseCase.ts
-│   │       └── ...
+│   │       └── GetAdByIdUseCase.ts
 │   │
 │   ├── infrastructure/            # 🔧 Camada de Infraestrutura
 │   │   ├── api/
-│   │   │   └── HttpClient.ts     # Cliente HTTP (Fetch API)
+│   │   │   └── HttpClient.ts     # Cliente HTTP com autenticação JWT
 │   │   └── repositories/
-│   │       └── AdsRepository.ts  # Implementação do repositório
+│   │       └── AdsRepository.ts  # Implementação com mapeamento de dados
+│   │
+│   ├── utils/                     # 🛠️ Utilitários
+│   │   └── dateUtils.ts          # Funções de data relativa
 │   │
 │   └── presentation/              # 🎨 Camada de Apresentação
 │       ├── components/            # Componentes reutilizáveis
 │       │   ├── Navbar.tsx
 │       │   ├── Footer.tsx
 │       │   ├── AdGallery.tsx
+│       │   ├── AdHeader.tsx
+│       │   ├── ContactPanel.tsx
+│       │   ├── ImageUpload.tsx    # Upload de múltiplas imagens
+│       │   ├── StatusComponents.tsx
 │       │   └── ...
 │       ├── pages/                 # Páginas da aplicação
 │       │   ├── HomePage.tsx
+│       │   ├── HomeLogadoPage.tsx
 │       │   ├── LoginPage.tsx
+│       │   ├── RegisterPage.tsx
 │       │   ├── NovoAnuncioPage.tsx
+│       │   ├── EditarAnuncioPage.tsx
 │       │   ├── MeusAnunciosPage.tsx
-│       │   └── ...
+│       │   ├── FavoritosPage.tsx
+│       │   ├── AdDetailsPage.tsx
+│       │   ├── MeuPerfilInformacoesPPage.tsx
+│       │   └── MeuPerfilSegurancaPage.tsx
 │       ├── context/               # Contextos React
-│       │   ├── AuthContext.tsx   # Autenticação global
-│       │   └── FavoritesContext.tsx
+│       │   ├── AuthContext.tsx        # Autenticação JWT
+│       │   ├── AuthContextRefactored.tsx # Versão refatorada (SRP)
+│       │   └── FavoritesContext.tsx   # Favoritos sincronizados
 │       ├── hooks/                 # Hooks customizados
 │       │   ├── useAds.ts
-│       │   ├── useAuth.ts
-│       │   └── useFavorites.ts
-│       └── App.tsx                # Componente raiz + rotas
+│       │   ├── useUserAds.ts
+│       │   ├── useAd.ts
+│       │   ├── useComments.ts
+│       │   └── ...
+│       └── App.tsx                # Componente raiz + navegação
 │
 ├── public/                        # Assets estáticos
 ├── index.html                     # HTML root
-├── .env.local                     # Variáveis de ambiente
+├── .env                           # Variáveis de ambiente (VITE_API_URL)
 ├── vite.config.ts                 # Configuração Vite
 ├── tailwind.config.js             # Configuração Tailwind
 └── package.json
@@ -110,11 +135,59 @@ frontend/
 
 ### 🏛️ Princípios Aplicados
 
+#### Clean Architecture
 - **Separation of Concerns**: Cada camada tem responsabilidade única
 - **Dependency Inversion**: Domínio não depende de frameworks
-- **Single Responsibility**: Classes com propósito bem definido
-- **Interface Segregation**: Contratos específicos e coesos
-- **Open/Closed**: Aberto para extensão, fechado para modificação
+- **Testability**: Lógica de negócio isolada e testável
+- **Framework Independence**: Domínio independente de React/Vite
+
+#### SOLID Principles
+- **S**ingle Responsibility: AuthService, StorageService separados
+- **O**pen/Closed: Use cases extensíveis sem modificação
+- **L**iskov Substitution: Interfaces implementadas corretamente
+- **I**nterface Segregation: IAdsRepository específico e coeso
+- **D**ependency Inversion: Repositórios via interfaces
+
+#### Design Patterns
+- **Repository Pattern**: Abstração de acesso a dados
+- **Mapper Pattern**: Transformação DTO ↔ Domain (AdMapper)
+- **Service Pattern**: Lógica de autenticação e storage
+- **Use Case Pattern**: Casos de uso com validação
+
+---
+
+## 🎯 Funcionalidades Implementadas
+
+### Sistema de Rascunhos (Drafts)
+
+- ✅ Criar anúncios incompletos sem seller/location
+- ✅ Salvar automaticamente como rascunho
+- ✅ Validação condicional ao publicar
+- ✅ Mensagens de erro específicas para campos obrigatórios
+
+### Validação no Frontend
+
+```typescript
+// CreateAdUseCaseRefactored.ts
+if (ad.status === 'published') {
+  if (!ad.seller) throw new Error('Seller é obrigatório para publicação');
+  if (!ad.location) throw new Error('Location é obrigatório para publicação');
+}
+```
+
+### Transformação de Dados
+
+```typescript
+// AdMapper.ts - DTO → Domain
+static toDomain(dto: AdDTO): Ad {
+  return new Ad(
+    dto.id,
+    dto.title,
+    dto.description,
+    // ... transformações específicas
+  );
+}
+```
 
 ---
 
@@ -124,29 +197,29 @@ frontend/
 
 - Node.js 18+
 - npm ou yarn
-- Backend rodando em `http://localhost:4000`
+- Backend rodando em `http://localhost:8000`
 
 ### 1. Entre no diretório
 
 ```bash
-cd frontend
+cd Front
 ```
 
-### 2. Verifique as variáveis de ambiente
-
-O arquivo `.env.local` já está configurado:
-
-```env
-VITE_API_URL=http://localhost:4000/api
-```
-
-> Se o backend estiver em outra porta, ajuste aqui!
-
-### 3. Instale as dependências
+### 2. Instale as dependências
 
 ```bash
 npm install
 ```
+
+### 3. Configure as variáveis de ambiente
+
+O arquivo `.env` deve conter:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+```
+
+> ⚠️ Certifique-se de que o backend está rodando na porta 8000!
 
 ### 4. Execute o aplicativo
 
@@ -155,7 +228,13 @@ npm install
 npm run dev
 ```
 
-✅ Aplicação rodando em: **http://localhost:5173** 🎉
+**Build para Produção:**
+```bash
+npm run build
+npm run preview
+```
+
+✅ **Aplicação rodando em:** http://localhost:5173 🎉
 
 **Build de Produção:**
 ```bash
@@ -220,12 +299,15 @@ npm run preview
 ```
 1. Menu usuário → "Meus Anúncios"
 2. Veja seções:
-   - 📝 Rascunhos (amarelo)
-   - ✨ Publicados (branco)
+   - Rascunhos (cards amarelos)
+   - Publicados (cards brancos)
 3. Ações disponíveis:
    - Editar: altere dados e status
-   - Publicar: transforme rascunho em público
+   - Concluído: marque como alugado (status completed)
    - Excluir: remova o anúncio
+4. Data de publicação exibida dinamicamente:
+   - "agora mesmo", "há 5 minutos", "ontem", "há 3 dias", etc.
+5. Clique na imagem do anúncio para ver detalhes
 ```
 
 #### 6️⃣ **Favoritar Anúncios**
@@ -291,17 +373,20 @@ headers: {
 | Criar anúncio | `/ads` | POST |
 | Atualizar anúncio | `/ads/:id` | PUT |
 | Deletar anúncio | `/ads/:id` | DELETE |
-| Meus anúncios | `/users/me/ads` | GET |
+| Meus anúncios | `/ads/me` | GET |
 | Listar favoritos | `/favorites` | GET |
 | Toggle favorito | `/favorites/:id/toggle` | POST |
 
 ### Estados de Anúncio
 
 ```typescript
-type AdStatus = 'draft' | 'published';
+type AdStatus = 'draft' | 'published' | 'reserved' | 'completed' | 'cancelled';
 
-// 'draft'     → Aparece apenas em "Meus Anúncios" (privado)
-// 'published' → Aparece na Home (público) + Meus Anúncios
+// 'draft'     → Rascunho (privado, apenas em "Meus Anúncios")
+// 'published' → Publicado (aparece na Home)
+// 'reserved'  → Reservado (em negociação)
+// 'completed' → Concluído (alugado com sucesso)
+// 'cancelled' → Cancelado
 ```
 
 ---
@@ -406,7 +491,7 @@ Contribuições são bem-vindas! Ao contribuir:
 
 <div align="center">
 
-### Desenvolvido com ❤️ e ☕
+### Desenvolvido por Eduardo Ribeiro com ❤️ e ☕
 
 **[⬆ Voltar ao topo](#-frontend---tem-vaga-aí)**
 

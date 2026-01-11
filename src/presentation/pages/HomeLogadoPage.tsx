@@ -9,7 +9,7 @@ const heroImage =
   'https://cearaselvagem.com/wp-content/uploads/2024/05/Cedro-e-Galinha-Choca-em-Quixada-1200x540-1.png';
 
 const HomeLogadoPage = ({ onNavigate }: HomeLogadoPageProps) => {
-  const { ads, loading } = useAds();
+  const { ads, loading, error } = useAds();
   
   interface FilterState {
     priceMin: number;
@@ -67,6 +67,18 @@ const HomeLogadoPage = ({ onNavigate }: HomeLogadoPageProps) => {
   );
 
   if (loading) return <div className="flex items-center justify-center min-h-screen pt-20">Carregando...</div>;
+  
+  if (error) return (
+    <div className="flex flex-col items-center justify-center min-h-screen pt-20">
+      <p className="text-red-600 mb-4">{error}</p>
+      <button 
+        onClick={() => window.location.reload()} 
+        className="px-4 py-2 bg-[#61452a] text-white rounded-lg hover:bg-[#4d3622]"
+      >
+        Tentar novamente
+      </button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#f7f7f7]">
